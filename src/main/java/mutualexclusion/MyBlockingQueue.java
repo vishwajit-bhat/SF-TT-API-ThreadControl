@@ -1,28 +1,38 @@
 package mutualexclusion;
 
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+
 public class MyBlockingQueue<E> {
   private E [] data = (E[])new Object[10];
   private int count = 0;
+  ReentrantLock lock = new ReentrantLock();
+  Condition notEmpty = lock.newCondition();
+  Condition notFull = lock.newCondition();
 
   public E take() throws InterruptedException {
-    synchronized (this) { // once entered, the ONLY way to resume is to gain the lock
+    lock.lock();
+    try {
       while (count == 0)
-        this.wait();
+        notEmpty.await();
       E rv = data[0];
       System.arraycopy(data, 1, data, 0, --count);
-//      this.notify();
-      this.notifyAll();
+      notFull.signal();
       return rv;
+    } finally {
+      lock.unlock();
     }
   }
 
   public void put(E e) throws InterruptedException {
-    synchronized (this) {
+    lock.lock();
+    try {
       while (count == data.length)
-        this.wait();
+        notFull.await();
       data[count++] = e;
-//      this.notify();
-      this.notifyAll(); // notifies ALL!!!
+      notEmpty.signal();
+    } finally {
+      lock.unlock();
     }
   }
 

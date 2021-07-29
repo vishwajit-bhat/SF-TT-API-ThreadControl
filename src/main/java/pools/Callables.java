@@ -39,10 +39,18 @@ public class Callables {
       Iterator<Future<String>> ifs = handles.iterator();
       while (ifs.hasNext()) {
         Future<String> handle = ifs.next();
-//        handle.cancel...
+//        handle.cancel... IF YOU DO THIS, get will throw a CancellationException
         if (handle.isDone()) {
-          String rv = handle.get();
-          System.out.println("task returned " + rv);
+          try {
+            String rv = handle.get();
+            System.out.println("task returned " + rv);
+          } catch (InterruptedException ie) {
+            // someone interrupted the MAIN thread
+          } catch (CancellationException ce) {
+            // someone called handle.cancel on THIS task
+          } catch (ExecutionException ee) {
+            System.out.println("task threw an exception: " + ee.getCause());
+          }
           ifs.remove();
         }
       }
